@@ -1,82 +1,71 @@
-import Link from "next/link";
+'use client'
+import React, { useState, useEffect } from 'react';
+import Navbar from './navBar';
+import Content from './mainContent';
+import Footer from './footer';
+import BaseBG from './background';
 
-import { CreatePost } from "@/app/_components/create-post";
-import { getServerAuthSession } from "@/server/auth";
-import { api } from "@/trpc/server";
+export default function Home() {
+  const [offsetY, setOffsetY] = useState(0);
+  const [isScrollPaused, setIsScrollPaused] = useState(false);
+  const [textOpacity, setTextOpacity] = useState(1); 
 
-export default async function Home() {
-  const hello = await api.post.hello({ text: "from tRPC" });
-  const session = await getServerAuthSession();
+  const handleScroll = () => {
+    const scrollPosition = window.pageYOffset;
+    const windowHeight = window.innerHeight;
+    const documentHeight = document.documentElement.scrollHeight;
+
+    if (scrollPosition + windowHeight >= documentHeight && !isScrollPaused) {
+      setIsScrollPaused(true);
+      setTimeout(() => {
+        setIsScrollPaused(false);
+      }, 2000);
+    }
+
+    if (!isScrollPaused) {
+      setOffsetY(scrollPosition);
+      const fadeStart = 100; 
+      const fadeEnd = 500; 
+      const opacity = 1 - Math.min(1, (scrollPosition - fadeStart) / (fadeEnd - fadeStart));
+      setTextOpacity(opacity);
+    }
+  };
+
+  useEffect(() => {
+    window.addEventListener('scroll', handleScroll);
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [isScrollPaused]);
+
+  const scale = Math.max(1, 2 - offsetY / 250);
+  const topPosition = Math.min(50, 35 + offsetY / 40);
+  const blur = Math.min(5, offsetY / 100);
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-[#2e026d] to-[#15162c] text-white">
-      <div className="container flex flex-col items-center justify-center gap-12 px-4 py-16 ">
-        <h1 className="text-5xl font-extrabold tracking-tight sm:text-[5rem]">
-          Create <span className="text-[hsl(280,100%,70%)]">T3</span> App
-        </h1>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-8">
-          <Link
-            className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4 hover:bg-white/20"
-            href="https://create.t3.gg/en/usage/first-steps"
-            target="_blank"
-          >
-            <h3 className="text-2xl font-bold">First Steps →</h3>
-            <div className="text-lg">
-              Just the basics - Everything you need to know to set up your
-              database and authentication.
-            </div>
-          </Link>
-          <Link
-            className="flex max-w-xs flex-col gap-4 rounded-xl bg-white/10 p-4 hover:bg-white/20"
-            href="https://create.t3.gg/en/introduction"
-            target="_blank"
-          >
-            <h3 className="text-2xl font-bold">Documentation →</h3>
-            <div className="text-lg">
-              Learn more about Create T3 App, the libraries it uses, and how to
-              deploy it.
-            </div>
-          </Link>
+    <main className="flex min-h-screen flex-col text-white">
+      <BaseBG />
+      <div style={{ flexGrow: 1, padding: '700px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+        <div style={{
+          position: 'fixed',
+          top: `${topPosition}%`,
+          left: '50%',
+          transform: `translate(-50%, -50%) scale(${scale})`,
+          filter: `blur(${blur}px)`,
+          fontWeight: 'bold',
+          fontSize: '2rem',
+          zIndex: 1,
+          opacity: textOpacity,
+        }}>
+          Bina Nusantara Computer Club
         </div>
-        <div className="flex flex-col items-center gap-2">
-          <p className="text-2xl text-white">
-            {hello ? hello.greeting : "Loading tRPC query..."}
-          </p>
-
-          <div className="flex flex-col items-center justify-center gap-4">
-            <p className="text-center text-2xl text-white">
-              {session && <span>Logged in as {session.user?.name}</span>}
-            </p>
-            <Link
-              href={session ? "/api/auth/signout" : "/api/auth/signin"}
-              className="rounded-full bg-white/10 px-10 py-3 font-semibold no-underline transition hover:bg-white/20"
-            >
-              {session ? "Sign out" : "Sign in"}
-            </Link>
-          </div>
+        <Navbar />
+        <div style={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', position: 'relative', width: 'auto', margin: '0 auto', boxSizing: 'border-box'}}>
+          <Content />
         </div>
-
-        <CrudShowcase />
+        {/* <Footer /> */}
       </div>
     </main>
-  );
-}
-
-async function CrudShowcase() {
-  const session = await getServerAuthSession();
-  if (!session?.user) return null;
-
-  const latestPost = await api.post.getLatest();
-
-  return (
-    <div className="w-full max-w-xs">
-      {latestPost ? (
-        <p className="truncate">Your most recent post: {latestPost.name}</p>
-      ) : (
-        <p>You have no posts yet.</p>
-      )}
-
-      <CreatePost />
-    </div>
   );
 }
